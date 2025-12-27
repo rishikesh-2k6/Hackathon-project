@@ -13,6 +13,48 @@ import speech_recognition as sr
 from pydantic import BaseModel
 from PIL import Image, ImageTk
 import google.generativeai as genai
+import difflib
+import math
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# ==========================================
+# LISTENING WAVE COMPONENT
+# ==========================================
+class ListeningWave:
+    def __init__(self, parent, colors):
+        self.canvas = tk.Canvas(parent, width=150, height=40, bg="#1a1b26", highlightthickness=0)
+        self.colors = colors
+        self.dots = []
+        self.angle = 0
+        self.is_animating = False
+        for i in range(4):
+            dot = self.canvas.create_oval(35 + i * 22, 15, 47 + i * 22, 27, fill=self.colors[i], outline="")
+            self.dots.append(dot)
+
+    def start(self):
+        self.is_animating = True
+        self.canvas.pack(pady=(0, 10))
+        self.animate()
+
+    def stop(self):
+        self.is_animating = False
+        self.canvas.pack_forget()
+
+    def animate(self):
+        if not self.is_animating:
+            return
+        for i, dot in enumerate(self.dots):
+            y_offset = math.sin(self.angle + (i * 0.9)) * 10
+            x1 = 35 + i * 22
+            y1 = 15 + y_offset
+            x2 = 47 + i * 22
+            y2 = 27 + y_offset
+            self.canvas.coords(dot, x1, y1, x2, y2)
+        self.angle += 0.2
+        self.canvas.after(20, self.animate)
 
 
 # SYSTEM OPTIMIZATION
@@ -136,12 +178,12 @@ def get_ai_command(user_text):
 # GHOST CURSOR
 # ==========================================
 class GhostCursor:
-    def show_and_move(self, target_x, target_y, text):
-        t = threading.Thread(target=self._run_overlay, args=(target_x, target_y, text))
+    def show_and_move(self, target_x, target_y, text, stop_event=None):
+        t = threading.Thread(target=self._run_overlay, args=(target_x, target_y, text, stop_event))
         t.start()
         t.join()
 
-    def _run_overlay(self, tx, ty, text):
+    def _run_overlay(self, tx, ty, text, stop_event=None):
         comtypes.CoInitialize()
         try:
             root = tk.Tk()
@@ -199,7 +241,11 @@ class Automator:
     def __init__(self, status_cb):
         self.update_status = status_cb
 
-    def execute(self, cmd, ghost):
+    def execute(self, cmd, ghost, stop_event=None):
+        # Check if execution should be stopped
+        if stop_event and stop_event.is_set():
+            return "Stopped", False
+            
         ppt = auto.WindowControl(searchDepth=1, ClassName="PPTFrameClass")
         if not ppt.Exists(0, 1): ppt = auto.WindowControl(searchDepth=1, RegexName=".*PowerPoint.*")
         if not ppt.Exists(0, 1): return "PowerPoint not found!", False
@@ -217,7 +263,7 @@ class Automator:
         if tab.Exists(0, 1):
             if not tab.GetSelectionItemPattern().IsSelected:
                 r = tab.BoundingRectangle
-                ghost.show_and_move((r.left + r.right) // 2, (r.top + r.bottom) // 2, f"Click {cmd.tab_name}")
+                ghost.show_and_move((r.left + r.right) // 2, (r.top + r.bottom) // 2, f"Click {cmd.tab_name}", stop_event)
                 time.sleep(0.5)
                 tab.Click(simulateMove=False)
             time.sleep(0.5)
@@ -240,7 +286,7 @@ class Automator:
 
         if btn.Exists(0, 1):
             r = btn.BoundingRectangle
-            ghost.show_and_move((r.left + r.right) // 2, (r.top + r.bottom) // 2, f"Click {cmd.button_name}")
+            ghost.show_and_move((r.left + r.right) // 2, (r.top + r.bottom) // 2, f"Click {cmd.button_name}", stop_event)
             return "Done!", True
         return f"Button {cmd.button_name} missing", False
 
@@ -255,7 +301,9 @@ class WorkerApp(ctk.CTk):
         # --- WINDOW SETUP ---
         # "Chroma Key" color for transparency (this color becomes invisible)
         self.TRANSPARENT_COLOR = "#ffff01"
-        self.DARK_BG = "#1a1a1a"
+        self.BG_COLOR = "#1a1b26"
+        self.HEADER_COLOR = "#1f2335"  # Slightly different shade for header
+        self.ACCENT_COLOR = "#24283b"
 
         self.geometry("60x60+100+100")
         self.overrideredirect(True)
@@ -267,6 +315,7 @@ class WorkerApp(ctk.CTk):
 
         self.is_expanded = False
         self.is_listening = False
+        self.last_input = ""
         self.recognizer = sr.Recognizer()
         self.ghost = GhostCursor()
         self.automator = Automator(self.update_status_safe)
@@ -274,6 +323,15 @@ class WorkerApp(ctk.CTk):
         # --- LOAD ASSETS ---
         script_dir = os.path.dirname(os.path.abspath(__file__))
         self.images = {}
+
+        # Load Logo Icon
+        logo_path = os.path.join(script_dir, "logo.ico")
+        self.logo_img = None
+        try:
+            if os.path.exists(logo_path):
+                self.logo_img = ctk.CTkImage(Image.open(logo_path), size=(20, 20))
+        except Exception:
+            self.logo_img = None
 
         # 1. Start Icon (The Robot Face only)
         start_icon_path = os.path.join(script_dir, "start_icon.png")
@@ -288,120 +346,148 @@ class WorkerApp(ctk.CTk):
             "thinking": "robo_thinking.png", "success": "robo_success.png",
             "error": "robo_error.png"
         }
+        self.mini_icon_img = None
         try:
             for k, v in files.items():
                 path = os.path.join(script_dir, v)
                 if os.path.exists(path):
-                    self.images[k] = ctk.CTkImage(Image.open(path), size=(130, 130))
+                    img = Image.open(path)
+                    self.images[k] = ctk.CTkImage(img, size=(150, 150))
+                    if k == "idle": 
+                        self.mini_icon_img = ctk.CTkImage(img, size=(60, 60))
         except:
             pass
 
         # 3. Mic Icon
         mic_path = os.path.join(script_dir, "mic.png")
         self.mic_icon = None
-        if os.path.exists(mic_path):
-            self.mic_icon = ctk.CTkImage(Image.open(mic_path), size=(20, 20))
+        try:
+            if os.path.exists(mic_path):
+                self.mic_icon = ctk.CTkImage(Image.open(mic_path), size=(18, 18))
+        except Exception:
+            self.mic_icon = None
 
-        # --- LAYOUT ---
-
-        # Main Container
-        self.main_frame = ctk.CTkFrame(self, fg_color="transparent", corner_radius=0)
+        # --- UI LAYOUT ---
+        self.main_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.main_frame.pack(fill="both", expand=True)
-
-        # A. MINI MODE BUTTON (Transparent Background)
-        self.btn_mini = ctk.CTkButton(
-            self.main_frame,
-            text="" if self.start_icon_img else "🤖",
-            image=self.start_icon_img,
-            width=60, height=60,
-            fg_color="transparent",  # No frame color
-            hover_color=None,  # No hover effect
-            command=self.animate_expansion
-        )
+        
+        self.btn_mini = ctk.CTkButton(self.main_frame, text="🤖", image=self.mini_icon_img, width=60, height=60,
+                                     fg_color="transparent", command=self.animate_expansion)
         self.btn_mini.place(relx=0.5, rely=0.5, anchor="center")
-
-        # B. FULL MODE CONTAINER (Hidden)
-        self.full_ui_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-
-        # 1. Avatar Button
-        self.avatar_btn = ctk.CTkButton(
-            self.full_ui_frame,
-            text="",
-            image=self.images.get("idle"),
-            fg_color="transparent",
-            hover_color="#2a2a2a",
-            width=130, height=130,
-            command=self.animate_contraction
-        )
-        self.avatar_btn.pack(pady=(10, 0))
-
-        # 2. Controls
-        self.controls_frame = ctk.CTkFrame(self.full_ui_frame, fg_color="transparent")
-        self.controls_frame.pack(pady=5)
-
-        self.entry = ctk.CTkEntry(self.controls_frame, placeholder_text="Tell me what to do...", width=180)
-        self.entry.pack(pady=5)
+        
+        self.full_ui_frame = ctk.CTkFrame(self.main_frame, fg_color=self.BG_COLOR, corner_radius=15)
+        
+        # --- MODIFIED HEADER WITH DIFFERENT COLOR AND ICON ---
+        self.header = ctk.CTkFrame(self.full_ui_frame, fg_color=self.HEADER_COLOR, height=40, corner_radius=15)
+        self.header.pack(fill="x", padx=2, pady=2)
+        
+        # App Icon in Header
+        if self.logo_img:
+            self.icon_lbl = ctk.CTkLabel(self.header, text="", image=self.logo_img)
+            self.icon_lbl.pack(side="left", padx=(15, 5))
+        
+        ctk.CTkLabel(self.header, text="Instructly", font=("Segoe UI", 14, "bold")).pack(side="left", padx=0)
+        
+        ctk.CTkButton(self.header, text="✕", width=30, height=30, fg_color="transparent", hover_color="#ff4444",
+                     command=self.close_app).pack(side="right", padx=5)
+        
+        ctk.CTkButton(self.header, text="—", width=30, height=30, fg_color="transparent",
+                     command=self.animate_contraction).pack(side="right", padx=2)
+        
+        # Body Content
+        self.avatar_display = ctk.CTkLabel(self.full_ui_frame, text="", image=self.images.get("idle"))
+        self.avatar_display.pack(pady=(20, 10))
+        
+        self.dot_wave = ListeningWave(self.full_ui_frame, ["#4285F4", "#EA4335", "#FBBC05", "#34A853"])
+        
+        self.lbl_status = ctk.CTkLabel(self.full_ui_frame, text="Ready.", font=("Segoe UI", 16), text_color="#a9b1d6")
+        self.lbl_status.pack()
+        
+        self.footer = ctk.CTkFrame(self.full_ui_frame, fg_color="transparent")
+        self.footer.pack(fill="x", padx=20, pady=20, side="bottom")
+        
+        # Command Buttons
+        self.btn_bar = ctk.CTkFrame(self.footer, fg_color="transparent")
+        self.btn_bar.pack(fill="x", pady=(0, 5))
+        
+        ctk.CTkButton(self.btn_bar, text="🔄 Redo Last", height=32, fg_color=self.ACCENT_COLOR,
+                     command=self.redo_action).pack(side="left", expand=True, padx=(0, 5), fill="x")
+        
+        ctk.CTkButton(self.btn_bar, text="🛑 Stop Action", height=32, fg_color="#f7768e", text_color="black",
+                     command=self.stop_action).pack(side="left", expand=True, padx=(5, 0), fill="x")
+        
+        # Suggestion Area
+        self.suggestion_frame = ctk.CTkFrame(self.footer, fg_color="transparent")
+        self.suggestion_frame.pack(fill="x", pady=(0, 5))
+        
+        self.lbl_suggest = ctk.CTkLabel(self.suggestion_frame, text="Try it:", font=("Segoe UI", 11),
+                                       text_color="#565f89")
+        self.lbl_suggest.pack(side="left")
+        
+        self.btn_try_cmd = ctk.CTkButton(self.suggestion_frame, text="Add Text",
+                                        font=("Segoe UI", 11, "underline"),
+                                        fg_color="transparent", hover_color=self.BG_COLOR,
+                                        text_color="#7aa2f7", width=10,
+                                        command=lambda: self.quick_command("Add Text"))
+        self.btn_try_cmd.pack(side="left", padx=2)
+        
+        # Input Box
+        self.input_bg = ctk.CTkFrame(self.footer, fg_color="black", corner_radius=20, height=45)
+        self.input_bg.pack(fill="x")
+        
+        self.entry = ctk.CTkEntry(self.input_bg, placeholder_text="Command...", border_width=0, fg_color="transparent")
+        self.entry.pack(side="left", fill="both", expand=True, padx=(15, 5))
         self.entry.bind("<Return>", self.start_execution)
+        
+        ctk.CTkButton(self.input_bg, text="", image=self.mic_icon, width=35, height=35, fg_color="transparent",
+                     command=self.start_voice).pack(side="right")
+        
+        ctk.CTkButton(self.input_bg, text="➤", width=35, height=35, fg_color="transparent",
+                     command=lambda: self.start_execution(None)).pack(side="right", padx=(0, 5))
 
-        self.btn_mic = ctk.CTkButton(
-            self.controls_frame,
-            text=" Voice" if self.mic_icon else "🎤 Voice",
-            image=self.mic_icon,
-            width=160,
-            fg_color="#444444",
-            command=self.start_voice_listening
-        )
-        self.btn_mic.pack(pady=5)
-
-        self.btn_run = ctk.CTkButton(self.controls_frame, text="GO", width=160,
-                                     command=lambda: self.start_execution(None))
-        self.btn_run.pack(pady=5)
-
-        self.lbl_status = ctk.CTkLabel(self.controls_frame, text="Ready.", text_color="gray", wraplength=180)
-        self.lbl_status.pack(pady=5)
+    def quick_command(self, cmd_text):
+        self.entry.delete(0, 'end')
+        self.entry.insert(0, cmd_text)
+        self.start_execution(None)
 
     def set_expression(self, expression):
         if self.images and expression in self.images:
-            self.avatar_btn.configure(image=self.images[expression])
+            self.avatar_display.configure(image=self.images[expression])
 
     def animate_expansion(self):
+        cx, cy = self.winfo_x(), self.winfo_y()
         self.btn_mini.place_forget()
-
-        # Switch background to OPAQUE DARK for the main UI
-        self.configure(fg_color=self.DARK_BG)
-
-        steps = [("80x100", 0.02), ("120x150", 0.02), ("160x220", 0.02), ("220x380", 0.02)]
-        for geo, delay in steps:
-            self.geometry(geo)
-            self.update()
-            time.sleep(delay)
-
+        self.configure(fg_color=self.BG_COLOR)
+        self.wm_attributes("-transparentcolor", "")
+        self.geometry(f"320x480+{cx}+{cy}")
         self.full_ui_frame.pack(fill="both", expand=True)
+        self.entry.focus_set()
         self.is_expanded = True
 
     def animate_contraction(self):
+        cx, cy = self.winfo_x(), self.winfo_y()
         self.full_ui_frame.pack_forget()
-
-        # Switch background back to TRANSPARENT for floating robot
         self.configure(fg_color=self.TRANSPARENT_COLOR)
-
-        steps = [("160x220", 0.02), ("120x150", 0.02), ("80x100", 0.02), ("60x60", 0.02)]
-        for geo, delay in steps:
-            self.geometry(geo)
-            self.update()
-            time.sleep(delay)
-
+        self.wm_attributes("-transparentcolor", self.TRANSPARENT_COLOR)
+        self.geometry(f"60x60+{cx}+{cy}")
         self.btn_mini.place(relx=0.5, rely=0.5, anchor="center")
         self.is_expanded = False
+
+    def close_app(self):
+        self.quit()
+        sys.exit()
 
     def update_status_safe(self, msg):
         self.lbl_status.configure(text=msg)
 
-    def start_voice_listening(self):
-        if self.is_listening: return
+    def start_voice(self):
+        if self.is_listening: 
+            return
         self.is_listening = True
-        self.lbl_status.configure(text="Listening...", text_color="#E53935")
-        self.set_expression("listening")
+        self.avatar_display.configure(image=self.images["listening"])
+        self.update_status_safe("Listening...")
+        self.entry.delete(0, 'end')
+        self.dot_wave.start()
         threading.Thread(target=self.bg_listen).start()
 
     def bg_listen(self):
@@ -409,38 +495,61 @@ class WorkerApp(ctk.CTk):
             with sr.Microphone() as source:
                 self.recognizer.adjust_for_ambient_noise(source, 0.5)
                 audio = self.recognizer.listen(source, timeout=5)
-            text = self.recognizer.recognize_google(audio)
-            self.entry.delete(0, 'end');
-            self.entry.insert(0, text)
-            self.after(0, lambda: self.start_execution(None))
-        except:
-            self.set_expression("error")
+                text = self.recognizer.recognize_google(audio)
+                self.after(0, lambda: self.entry.delete(0, 'end'))
+                self.after(0, lambda: self.entry.insert(0, text))
+                self.after(700, lambda: self.start_execution(None))
+        except Exception:
+            self.update_status_safe("Voice Error")
+            self.after(0, lambda: self.set_expression("error"))
+            time.sleep(1.5)
+            self.after(0, self.reset_to_idle)
         finally:
             self.is_listening = False
+            self.after(0, self.dot_wave.stop)
+
+    def reset_to_idle(self):
+        self.set_expression("idle")
+        self.update_status_safe("Ready.")
 
     def start_execution(self, event):
         txt = self.entry.get()
-        if not txt: return
+        if not txt: 
+            return
+        self.last_input = txt
+        self.entry.delete(0, 'end')
+        self.execute_thread(txt)
+
+    def execute_thread(self, txt):
         self.set_expression("thinking")
-        self.lbl_status.configure(text="Thinking...", text_color="#3B8ED0")
-        threading.Thread(target=self.bg_execute, args=(txt,)).start()
+        self.lbl_status.configure(text="Searching...")
+        threading.Thread(target=self.bg_execute, args=(txt,), daemon=True).start()
 
     def bg_execute(self, txt):
         comtypes.CoInitialize()
         try:
-            cmd, err = get_ai_command(txt)
+            cmd, _ = get_ai_command(txt)
             if cmd:
-                self.update_status_safe(f"On it: {cmd.button_name}")
                 msg, success = self.automator.execute(cmd, self.ghost)
                 self.update_status_safe(msg)
                 self.set_expression("success" if success else "error")
             else:
-                self.update_status_safe("Confused.")
+                self.update_status_safe("Command Error")
                 self.set_expression("error")
         finally:
             comtypes.CoUninitialize()
-            time.sleep(2)
-            self.set_expression("idle")
+            time.sleep(1.5)
+            self.after(0, self.reset_to_idle)
+
+    def redo_action(self):
+        if self.last_input: 
+            self.execute_thread(self.last_input)
+    
+    def stop_action(self):
+        self.automator.stop_event.set()
+        self.update_status_safe("Stopped.")
+        self.set_expression("error")
+        self.after(1500, self.reset_to_idle)
 
 
 if __name__ == "__main__":
@@ -469,6 +578,15 @@ if __name__ == "__main__":
 
     app.bind("<ButtonPress-1>", start_move)
     app.bind("<ButtonRelease-1>", stop_move)
-    app.bind("<B1-Motion>", do_move)
+    
+    # Updated binding to include icon label for dragging
+    bind_list = [app.header, app.btn_mini, app.avatar_display]
+    if hasattr(app, 'icon_lbl'): 
+        bind_list.append(app.icon_lbl)
+
+    for w in bind_list:
+        w.bind("<ButtonPress-1>", start_move)
+        w.bind("<ButtonRelease-1>", stop_move)
+        w.bind("<B1-Motion>", do_move)
 
     app.mainloop()
