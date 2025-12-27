@@ -225,7 +225,7 @@ class Automator:
             return f"Tab {cmd.tab_name} missing", False
 
         self.update_status(f"Finding {cmd.button_name}...")
-        btn = ppt.Control(Name=cmd.button_name, searchDepth=12)
+        btn = ppt.Control(Name=cmd.button_name, searchDepth=50)
         if not btn.Exists(0, 0): btn = ppt.Control(RegexName=f".*{cmd.button_name}.*", searchDepth=50)
 
         if btn.Exists(0, 1):
