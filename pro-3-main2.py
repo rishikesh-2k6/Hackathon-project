@@ -56,7 +56,7 @@ class ListeningWave:
         self.angle += 0.2
         self.canvas.after(20, self.animate)
 
-
+# ==========================================
 # SYSTEM OPTIMIZATION
 # ==========================================
 sys.stdout.reconfigure(encoding='utf-8', line_buffering=True)
