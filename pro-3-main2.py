@@ -10,9 +10,10 @@ import tkinter as tk
 import json
 import psutil
 import speech_recognition as sr
+import math
+import requests
 from pydantic import BaseModel
 from PIL import Image, ImageTk
-import google.generativeai as genai
 
 
 # SYSTEM OPTIMIZATION
