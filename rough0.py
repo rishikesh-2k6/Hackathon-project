@@ -30,7 +30,7 @@ except:
 # ==========================================
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
-MY_API_KEY = "AIzaSyChcf8B7dBZneaGihSgLrxgGKLl-OGtJwA"
+#MY_API_KEY = "keep your api key"
 
 # ==========================================
 # AI SETUP
