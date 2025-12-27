@@ -29,7 +29,9 @@ except:
 # ==========================================
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
-#MY_API_KEY = "paste your api"
+# CHANGE: Uncommented and added real key
+MY_API_KEY = "AIzaSyChcf8B7dBZneaGihSgLrxgGKLl-OGtJwA"
+
 
 # ==========================================
 # AI SETUP
@@ -86,6 +88,18 @@ OFFLINE_COMMANDS = {
     "icon": {"tab": "Insert", "btn": "Icons"},
     "chart": {"tab": "Insert", "btn": "Chart"},
     "play": {"tab": "Slide Show", "btn": "From Beginning"},
+    # adding new offline commands:
+"underline": {"tab": "Home", "btn": "Underline"},
+"arrange": {"tab": "Home", "btn": "Arrange"},
+# Insert Tab
+"icon": {"tab": "Insert", "btn": "Icons"},
+# Animations Tab (NEW SECTION)
+"animation": {"tab": "Animations", "btn": "Add Animation"},
+"animate": {"tab": "Animations", "btn": "Add Animation"},
+"fade": {"tab": "Animations", "btn": "Fade"},
+"fly in": {"tab": "Animations", "btn": "Fly In"},
+# ... 6 more animation commands
+
 }
 
 
