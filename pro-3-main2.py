@@ -14,8 +14,7 @@ from pydantic import BaseModel
 from PIL import Image, ImageTk
 import google.generativeai as genai
 
-# ==========================================
-# SYSTEM OPTIMIZATION
+#
 # ==========================================
 sys.stdout.reconfigure(encoding='utf-8', line_buffering=True)
 try:
