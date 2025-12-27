@@ -1,9 +1,38 @@
+# GUI Framework
 customtkinter>=5.2.0
+
+# Windows UI Automation
 uiautomation>=2.0.18
-Pillow>=10.0.0
-pydantic>=2.0.0
-google-generativeai>=0.3.0
-psutil>=5.9.0
-SpeechRecognition>=3.10.0
-python-dotenv>=1.0.0
 comtypes>=1.2.0
+
+# Image Processing
+Pillow>=10.0.0
+
+# Data Validation
+pydantic>=2.0.0
+
+# AI Integration
+google-generativeai>=0.3.0
+
+# System Utilities
+psutil>=5.9.0
+
+# Speech Recognition
+SpeechRecognition>=3.10.0
+
+# Environment Variables
+python-dotenv>=1.0.0
+
+# Additional dependencies for speech recognition
+pyaudio>=0.2.11
+
+# JSON handling (built-in, but listing for clarity)
+# json - built-in module
+
+# Threading and time (built-in modules)
+# threading - built-in module
+# time - built-in module
+# os - built-in module
+# sys - built-in module
+# ctypes - built-in module
+# tkinter - built-in module
