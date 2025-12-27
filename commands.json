@@ -1,0 +1,74 @@
+{
+    "font": {
+        "tab": "Home",
+        "btn": "Font"
+    },
+    "bold": {
+        "tab": "Home",
+        "btn": "Bold"
+    },
+    "italic": {
+        "tab": "Home",
+        "btn": "Italic"
+    },
+    "underline": {
+        "tab": "Home",
+        "btn": "Underline"
+    },
+    "new slide": {
+        "tab": "Home",
+        "btn": "New Slide"
+    },
+    "layout": {
+        "tab": "Home",
+        "btn": "Layout"
+    },
+    "text": {
+        "tab": "Insert",
+        "btn": "Text Box"
+    },
+    "textbox": {
+        "tab": "Insert",
+        "btn": "Text Box"
+    },
+    "picture": {
+        "tab": "Insert",
+        "btn": "Pictures"
+    },
+    "image": {
+        "tab": "Insert",
+        "btn": "Pictures"
+    },
+    "shape": {
+        "tab": "Insert",
+        "btn": "Shapes"
+    },
+    "icon": {
+        "tab": "Insert",
+        "btn": "Icons"
+    },
+    "chart": {
+        "tab": "Insert",
+        "btn": "Chart"
+    },
+    "animation": {
+        "tab": "Animations",
+        "btn": "Add Animation"
+    },
+    "animate": {
+        "tab": "Animations",
+        "btn": "Add Animation"
+    },
+    "fade": {
+        "tab": "Animations",
+        "btn": "Fade"
+    },
+    "fly in": {
+        "tab": "Animations",
+        "btn": "Fly In"
+    },
+    "play": {
+        "tab": "Slide Show",
+        "btn": "From Beginning"
+    }
+}
