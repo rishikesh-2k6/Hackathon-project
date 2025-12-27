@@ -264,6 +264,10 @@ class WorkerApp(ctk.CTk):
         # --- LOAD ASSETS ---
         script_dir = os.path.dirname(os.path.abspath(__file__))
         self.images = {}
+        # ADDED new constants:
+        self.BG_COLOR = "#1a1b26"      # NEW
+        self.ACCENT_COLOR = "#24283b"  # NEW (unused)
+
 
         # 1. Start Icon (The Robot Face only)
         start_icon_path = os.path.join(script_dir, "start_icon.png")
