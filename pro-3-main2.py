@@ -219,6 +219,8 @@ class Automator:
                 r = tab.BoundingRectangle
                 ghost.show_and_move((r.left + r.right) // 2, (r.top + r.bottom) // 2, f"Click {cmd.tab_name}")
                 time.sleep(0.5)
+                tab.Click(simulateMove=False)
+            time.sleep(0.5)
         else:
             return f"Tab {cmd.tab_name} missing", False
 
