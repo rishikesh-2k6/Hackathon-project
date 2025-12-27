@@ -225,8 +225,18 @@ class Automator:
             return f"Tab {cmd.tab_name} missing", False
 
         self.update_status(f"Finding {cmd.button_name}...")
-        btn = ppt.Control(Name=cmd.button_name, searchDepth=50)
-        if not btn.Exists(0, 0): btn = ppt.Control(RegexName=f".*{cmd.button_name}.*", searchDepth=50)
+        
+        # First attempt: Try exact name match with shallow search for performance
+        btn = ppt.Control(Name=cmd.button_name, searchDepth=15)
+        
+        # Second attempt: Use case-insensitive regex if exact match fails
+        if not btn.Exists(0, 0):
+            btn = ppt.Control(RegexName=f"(?i).*{cmd.button_name}.*", searchDepth=50)
+        
+        # Third attempt: Search within ribbon control for better button detection
+        if not btn.Exists(0, 0):
+            ribbon = ppt.PaneControl(RegexName=".*Ribbon.*", searchDepth=5)
+            found_btn, found_name = self.find_best_match_button(ribbon, cmd.button_name)
 
         if btn.Exists(0, 1):
             r = btn.BoundingRectangle
