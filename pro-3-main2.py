@@ -331,5 +331,29 @@ class WorkerApp(ctk.CTk):
 
     def execute_thread(self, txt): self.set_expression("thinking"); self.update_status_safe("Analyzing Sequence..."); threading.Thread(target=self.bg_execute, args=(txt,), daemon=True).start()
 
+    def bg_execute(self, txt):
+        comtypes.CoInitialize()
+        try:
+            ppt_win = self.automator.get_ppt_window()
+            if not ppt_win: self.update_status_safe("Open PowerPoint!"); return
+            commands, error = get_ai_commands(txt)
+            if not commands: self.update_status_safe(error or "Error"); return
+            full_script = "\n".join([f"Step {i+1}: {c.explanation}" for i, c in enumerate(commands)])
+            self.update_script_safe(full_script)
+            self.automator.stop_event.clear()
+            for cmd in commands:
+                if self.automator.stop_event.is_set(): break
+                msg, success = self.automator.execute_single_step(cmd, self.ghost, ppt_win)
+                self.update_status_safe(msg)
+                if not success: break
+            self.set_expression("success" if not self.automator.stop_event.is_set() else "error")
+        except: self.update_status_safe("Error")
+        finally: comtypes.CoUninitialize(); time.sleep(1.5); self.after(0, lambda: self.set_expression("idle"))
+
 if __name__ == "__main__":
-    print("Instructly AI - Voice Recognition Added")
+    app = WorkerApp()
+    def start_move(e): app.x = e.x; app.y = e.y
+    def do_move(e): app.geometry(f"+{app.winfo_x() + e.x - app.x}+{app.winfo_y() + e.y - app.y}")
+    for w in [app.header, app.avatar_display]:
+        w.bind("<ButtonPress-1>", start_move); w.bind("<B1-Motion>", do_move)
+    app.mainloop()
