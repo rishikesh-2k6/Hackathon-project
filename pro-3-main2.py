@@ -73,33 +73,24 @@ MY_API_KEY = "AIzaSyChcf8B7dBZneaGihSgLrxgGKLl-OGtJwA"
 
 
 # ==========================================
-# AUTO-DETECT MODEL
+# AI SETUP
 # ==========================================
-def get_working_model():
-    try:
-        print("DEBUG: Detecting available models...")
-        url = f"https://generativelanguage.googleapis.com/v1beta/models?key={MY_API_KEY}"
-        response = requests.get(url)
-        data = response.json()
-        candidates = []
-        for m in data.get('models', []):
-            if 'generateContent' in m.get('supportedGenerationMethods', []):
-                name = m['name'].replace("models/", "")
-                if "flash" in name and "8b" not in name: 
-                    return name
-                candidates.append(name)
-        if candidates: 
-            return candidates[0]
-    except: 
-        pass
-    return "gemini-1.5-flash"
+model = None
+try:
+    genai.configure(api_key=MY_API_KEY)
+    available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+    selected_model_name = next((m for m in available_models if "gemini-1.5-flash" in m), None)
+    if not selected_model_name:
+        selected_model_name = available_models[0] if available_models else None
+    if selected_model_name:
+        model = genai.GenerativeModel(selected_model_name)
+except Exception as e:
+    print(f"❌ AI Init Error: {e}")
 
-CURRENT_MODEL = get_working_model()
-print(f"✅ CONNECTED TO MODEL: {CURRENT_MODEL}")
-
-# ==========================================
-# AI CLIENT
-# ==========================================
+try:
+    ctypes.windll.shcore.SetProcessDpiAwareness(1)
+except Exception:
+    pass
 
 def translate_text_api(text, target_lang):
     if not text.strip(): 
