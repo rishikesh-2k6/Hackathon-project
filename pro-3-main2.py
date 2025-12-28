@@ -38,35 +38,33 @@ MY_API_KEY = "AIzaSyBQY4nZUriHn2xwO-UvC_eva4YqHQjCLN0"
 
 
 # ==========================================
-# AI SETUP
+# AUTO-DETECT MODEL
 # ==========================================
-model = None
-try:
-    genai.configure(api_key=MY_API_KEY)
-    available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-    selected_model_name = None
-    for m in available_models:
-        if "gemini-1.5-flash" in m:
-            selected_model_name = m
-            break
-    if not selected_model_name:
-        for m in available_models:
-            if "gemini-1.5-pro" in m:
-                selected_model_name = m
-                break
-    if not selected_model_name and available_models:
-        selected_model_name = available_models[0]
-    if selected_model_name:
-        model = genai.GenerativeModel(selected_model_name)
-    else:
-        print("❌ No AI models found.")
-except Exception as e:
-    print(f"❌ API Error: {e}")
+def get_working_model():
+    try:
+        print("DEBUG: Detecting available models...")
+        url = f"https://generativelanguage.googleapis.com/v1beta/models?key={MY_API_KEY}"
+        response = requests.get(url)
+        data = response.json()
+        candidates = []
+        for m in data.get('models', []):
+            if 'generateContent' in m.get('supportedGenerationMethods', []):
+                name = m['name'].replace("models/", "")
+                if "flash" in name and "8b" not in name: 
+                    return name
+                candidates.append(name)
+        if candidates: 
+            return candidates[0]
+    except: 
+        pass
+    return "gemini-1.5-flash"
 
-try:
-    ctypes.windll.shcore.SetProcessDpiAwareness(1)
-except:
-    pass
+CURRENT_MODEL = get_working_model()
+print(f"✅ CONNECTED TO MODEL: {CURRENT_MODEL}")
+
+# ==========================================
+# AI CLIENT
+# ==========================================
 
 # ==========================================
 # OFFLINE CACHE
@@ -113,27 +111,36 @@ class PPTCommand(BaseModel):
     explanation: str
 
 
-def get_ai_command(user_text):
-    clean = user_text.lower().strip()
-    for key, val in OFFLINE_COMMANDS.items():
-        if key in clean:
-            return PPTCommand(tab_name=val["tab"], button_name=val["btn"], explanation="Offline"), "Offline"
+def get_ai_command(user_text, current_tab="Unknown"):
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{CURRENT_MODEL}:generateContent?key={MY_API_KEY}"
+    headers = {'Content-Type': 'application/json'}
+    
+    prompt = f"""You are a PowerPoint Instructor.
+CONTEXT: User is at '{current_tab}' tab.
+REQ: "{user_text}"
+RETURN JSON ONLY: {{ "tab_name": "...", "button_name": "...", "explanation": "..." }}"""
 
-    if not model: return None, "AI Config Error"
-
+    data = { "contents": [{ "parts": [{"text": prompt}] }] }
+    
     try:
-        prompt = f"""
-        Map user request to PowerPoint Ribbon Tab and Button.
-        Rules: "Change font"->"Home"|"Font"; "Stylish"->"Insert"|"WordArt".
-        Request: "{user_text}"
-        Return JSON: {{"tab_name": "Insert", "button_name": "Shapes", "explanation": "..."}}
-        """
-        response = model.generate_content(prompt)
-        text_resp = response.text.replace("```json", "").replace("```", "").strip()
-        data = json.loads(text_resp)
-        return PPTCommand(tab_name=data["tab_name"], button_name=data["button_name"], explanation="AI"), None
-    except Exception as e:
-        return None, str(e)
+        response = requests.post(url, headers=headers, json=data)
+        if response.status_code == 200:
+            result = response.json()
+            try:
+                raw = result['candidates'][0]['content']['parts'][0]['text']
+                clean = raw.replace("```json", "").replace("```", "").strip()
+                d = json.loads(clean)
+                return PPTCommand(tab_name=d["tab_name"], button_name=d["button_name"], explanation="AI"), None
+            except: 
+                return None, "Parsing Error"
+        elif response.status_code == 429: 
+            return None, "⚠️ QUOTA FULL"
+        elif response.status_code == 404: 
+            return None, "⚠️ Model Error"
+        else: 
+            return None, f"Error {response.status_code}"
+    except: 
+        return None, "Connection Failed"
 
 
 # ==========================================
