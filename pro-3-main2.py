@@ -89,5 +89,49 @@ def get_working_model():
 
 CURRENT_MODEL = get_working_model()
 
+# ==========================================
+# AI CLIENT (SEQUENTIAL MULTI-TASKING)
+# ==========================================
+class PPTCommand(BaseModel):
+    tab_name: str
+    button_name: str
+    explanation: str
+
+def get_ai_commands(user_text, current_tab="Unknown"):
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{CURRENT_MODEL}:generateContent?key={MY_API_KEY}"
+    headers = {'Content-Type': 'application/json'}
+    prompt = f"""You are a PowerPoint Instructor. User may provide multiple tasks (e.g., 'add a slide and change background').
+Break these into a sequence of Ribbon button clicks.
+
+CONTEXT: User is at '{current_tab}' tab.
+REQ: "{user_text}"
+
+RETURN JSON LIST ONLY: [{{ "tab_name": "Home", "button_name": "New Slide", "explanation": "Create a slide" }},{{ "tab_name": "Design", "button_name": "Format Background", "explanation": "Change the background" }}]"""
+    
+    data = { "contents": [{ "parts": [{"text": prompt}] }] }
+    try:
+        response = requests.post(url, headers=headers, json=data)
+        if response.status_code == 200:
+            raw = response.json()['candidates'][0]['content']['parts'][0]['text']
+            clean = raw.replace("```json", "").replace("```", "").strip()
+            parsed = json.loads(clean)
+            if isinstance(parsed, dict): parsed = [parsed]
+            return [PPTCommand(**d) for d in parsed], None
+        return None, "API Error"
+    except: return None, "Connection Failed"
+
+def translate_text_api(text, target_lang):
+    if not text.strip(): return ""
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{CURRENT_MODEL}:generateContent?key={MY_API_KEY}"
+    headers = {'Content-Type': 'application/json'}
+    prompt = f"Translate to {target_lang}. Return ONLY translated text: '{text}'"
+    data = { "contents": [{ "parts": [{"text": prompt}] }] }
+    try:
+        response = requests.post(url, headers=headers, json=data)
+        if response.status_code == 200:
+            return response.json()['candidates'][0]['content']['parts'][0]['text'].strip()
+    except: pass
+    return text
+
 if __name__ == "__main__":
-    print("Instructly AI - AI Model Detection Added")
+    print("Instructly AI - AI Client Added")
