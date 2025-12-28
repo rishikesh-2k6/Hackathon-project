@@ -16,13 +16,14 @@ from pydantic import BaseModel
 from PIL import Image, ImageTk
 
 
+# ==========================================
 # SYSTEM OPTIMIZATION
 # ==========================================
 sys.stdout.reconfigure(encoding='utf-8', line_buffering=True)
 try:
     p = psutil.Process(os.getpid())
     p.nice(psutil.HIGH_PRIORITY_CLASS)
-except:
+except Exception:
     pass
 
 # ==========================================
@@ -30,8 +31,10 @@ except:
 # ==========================================
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
-# CHANGE: Uncommented and added real key
-MY_API_KEY = "AIzaSyChcf8B7dBZneaGihSgLrxgGKLl-OGtJwA"
+# ---------------------------------------------------------
+# ⚠️ YOUR API KEY ⚠️
+# ---------------------------------------------------------
+MY_API_KEY = "AIzaSyBQY4nZUriHn2xwO-UvC_eva4YqHQjCLN0"
 
 
 # ==========================================
