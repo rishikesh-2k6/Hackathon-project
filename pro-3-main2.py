@@ -269,6 +269,16 @@ class WorkerApp(ctk.CTk):
         self.avatar_display = ctk.CTkLabel(self.full_ui_frame, text="", image=self.images.get("idle")); self.avatar_display.pack(pady=(2, 0))
         self.dot_wave = ListeningWave(self.full_ui_frame, ["#4285F4", "#EA4335", "#FBBC05", "#34A853"])
         self.lbl_status = ctk.CTkLabel(self.full_ui_frame, text="Ready.", font=("Segoe UI", 14), text_color="#a9b1d6"); self.lbl_status.pack(pady=(0, 2))
+        # Footer
+        self.footer = ctk.CTkFrame(self.full_ui_frame, fg_color="transparent"); self.footer.pack(fill="x", padx=15, pady=2, side="bottom")
+        self.btn_bar = ctk.CTkFrame(self.footer, fg_color="transparent"); self.btn_bar.pack(fill="x", pady=(0, 2))
+        ctk.CTkButton(self.btn_bar, text="🔄 Redo", height=28, fg_color=self.ACCENT_COLOR, command=self.redo_action).pack(side="left", expand=True, padx=(0, 5), fill="x")
+        ctk.CTkButton(self.btn_bar, text="❌ Stop", height=28, fg_color=self.ACCENT_COLOR, command=self.stop_action).pack(side="left", expand=True, padx=(5, 0), fill="x")
+        self.input_bg = ctk.CTkFrame(self.footer, fg_color="black", corner_radius=18, height=35); self.input_bg.pack(fill="x", pady=(0, 5))
+        self.entry = ctk.CTkEntry(self.input_bg, placeholder_text="Command...", border_width=0, fg_color="transparent", font=("Segoe UI", 12)); self.entry.pack(side="left", fill="both", expand=True, padx=(10, 5))
+        self.entry.bind("<Return>", self.start_execution)
+        ctk.CTkButton(self.input_bg, text="", image=self.mic_icon, width=30, height=30, fg_color="transparent", command=self.start_voice).pack(side="right")
+        ctk.CTkButton(self.input_bg, text="➤", width=30, height=30, fg_color="transparent", command=lambda: self.start_execution(None)).pack(side="right", padx=(0, 5))
 
 if __name__ == "__main__":
-    print("Instructly AI - UI Header and Body Added")
+    print("Instructly AI - Input Controls Added")
