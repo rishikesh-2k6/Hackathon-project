@@ -133,5 +133,59 @@ def translate_text_api(text, target_lang):
     except: pass
     return text
 
+# ==========================================
+# GHOST CURSOR
+# ==========================================
+class GhostCursor:
+    def __init__(self):
+        self.stop_signal = threading.Event()
+
+    def point_at(self, x, y, text):
+        self.stop_signal.clear()
+        t = threading.Thread(target=self._run_overlay, args=(x, y, text))
+        t.start()
+
+    def hide(self):
+        self.stop_signal.set()
+
+    def _draw_tooltip(self, canvas, tx, ty, text):
+        text_x, text_y = tx + 25, ty + 25
+        txt_item = canvas.create_text(text_x, text_y, text=text, fill="white", font=("Segoe UI", 12, "bold"), anchor="nw")
+        bbox = canvas.bbox(txt_item)
+        if bbox:
+            x1, y1, x2, y2 = bbox
+            bg_item = canvas.create_rectangle(x1-5, y1-5, x2+5, y2+5, fill="black", outline="black")
+            canvas.tag_lower(bg_item, txt_item)
+
+    def _run_overlay(self, tx, ty, text):
+        comtypes.CoInitialize()
+        try:
+            root = tk.Tk()
+            root.overrideredirect(True); root.attributes('-topmost', True); root.attributes('-alpha', 1.0)
+            root.configure(bg="#010101"); root.wm_attributes("-transparentcolor", "#010101")
+            sw, sh = root.winfo_screenwidth(), root.winfo_screenheight()
+            root.geometry(f"{sw}x{sh}+0+0")
+            canvas = tk.Canvas(root, width=sw, height=sh, bg="#010101", highlightthickness=0); canvas.pack()
+            mx, my = auto.GetCursorPos()
+            steps = 80
+            for i in range(steps):
+                if self.stop_signal.is_set(): break
+                t_val = 1 - (1 - (i+1)/steps)**2
+                cx = int(mx + (tx - mx) * t_val); cy = int(my + (ty - my) * t_val)
+                canvas.delete("all")
+                pts = [cx, cy, cx, cy+26, cx+7, cy+20, cx+11, cy+29, cx+16, cy+27, cx+12, cy+18, cx+21, cy+18]
+                canvas.create_polygon(pts, outline="#2c2987", fill="#2c2987", width=2)
+                self._draw_tooltip(canvas, cx, cy, text)
+                root.update(); time.sleep(0.02)
+            while not self.stop_signal.is_set():
+                canvas.delete("all")
+                pts = [tx, ty, tx, ty+26, tx+7, ty+20, tx+11, ty+29, tx+16, ty+27, tx+12, ty+18, tx+21, ty+18]
+                canvas.create_polygon(pts, outline="#2c2987", fill="#2c2987", width=2)
+                self._draw_tooltip(canvas, tx, ty, text)
+                root.update(); time.sleep(0.01)
+            root.destroy()
+        except: pass
+        finally: comtypes.CoUninitialize()
+
 if __name__ == "__main__":
-    print("Instructly AI - AI Client Added")
+    print("Instructly AI - Ghost Cursor Added")
