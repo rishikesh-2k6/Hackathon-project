@@ -35,7 +35,7 @@ ctk.set_default_color_theme("blue")
 # ---------------------------------------------------------
 # ⚠️ YOUR API KEY ⚠️
 # ---------------------------------------------------------
-MY_API_KEY = "AIzaSyCwzywKhx91pyv8YxBjh2OYsDTAQZtYeVc"
+MY_API_KEY = "your api here"
 
 # ==========================================
 # UI COMPONENTS
