@@ -379,86 +379,79 @@ class Automator:
             time.sleep(0.1)
         return False
 
-    def execute(self, cmd, ghost, auto_mode=False):
-        ppt = self.get_ppt_window()
+# ==========================================
+# AUTOMATOR
+# ==========================================
+class Automator:
+    def __init__(self, status_cb):
+        self.update_status = status_cb
+        self.stop_event = threading.Event()
+
+    def get_topmost_ppt(self):
+        foreground_hwnd = ctypes.windll.user32.GetForegroundWindow()
+        ppt = auto.WindowControl(searchDepth=1, ClassName="PPTFrameClass")
+        if ppt.Exists(0, 0):
+            if ppt.NativeWindowHandle == foreground_hwnd:
+                return ppt
+            else:
+                rect = ppt.BoundingRectangle
+                if rect.width() > 0 and rect.height() > 0:
+                    return ppt
+        return None
+
+    def execute(self, cmd, ghost):
+        self.stop_event.clear()
+        ppt = self.get_topmost_ppt()
         if not ppt:
-            return "❌ PowerPoint not found!", False
-        
-        self.bring_ppt_to_foreground(ppt)
-        time.sleep(0.3)
-        
-        self.update_script(f"Step 1: Open '{cmd.tab_name}' tab.\n"
-                          f"Step 2: Click '{cmd.button_name}'.")
-        
-        # ===============================
-        # STEP 1 : TAB
-        # ===============================
-        self.update_status(f"Step 1: Go to '{cmd.tab_name}'")
+            return "❌ PowerPoint not active!", False
+
+        try:
+            ppt.SetFocus()
+            time.sleep(0.2)
+        except Exception:
+            pass
+
+        if self.stop_event.is_set(): 
+            return "Stopped", False
+
+        self.update_status(f"Scanning {cmd.tab_name}...")
         tab = ppt.TabItemControl(Name=cmd.tab_name, searchDepth=10)
         if not tab.Exists(0, 1):
-            tab = ppt.TabItemControl(RegexName=f"(?i).*{cmd.tab_name}.*",
-                                   searchDepth=10)
-        
-        if tab.Exists(0, 1):
-            try:
-                if not tab.GetSelectionItemPattern().IsSelected:
-                    r = tab.BoundingRectangle
-                    ghost.point_at((r.left + r.right) // 2,
-                                 (r.top + r.bottom) // 2,
-                                 f"{'Auto opening' if auto_mode else 'Click'} '{cmd.tab_name}'")
-                    time.sleep(0.25)  # 🔑 allow ghost/UI to settle
-                    
-                    if auto_mode:
-                        self.auto_click(tab)
-                    else:
-                        self._wait_for_click(tab)
-                    
-                    ghost.hide()
-                    if self.stop_event.is_set():
-                        return "Stopped", False
-                    time.sleep(0.3)
-            except:
-                pass
-        
-        # ===============================
-        # STEP 2 : BUTTON
-        # ===============================
-        self.update_status(f"Step 2: Click '{cmd.button_name}'")
-        ribbon = ppt.PaneControl(Name="Ribbon", searchDepth=3)
-        btn = ribbon.Control(Name=cmd.button_name, searchDepth=10)
-        
-        if not btn.Exists(0, 0):
-            btn = ribbon.Control(RegexName=f"(?i).*{cmd.button_name}.*",
-                               searchDepth=10)
-        
-        if not btn.Exists(0, 0):
-            btn = ppt.PaneControl(Name="Ribbon").Control(RegexName=f"(?i).*{cmd.button_name}.*",
-                                                       searchDepth=5)
-        
-        if not btn.Exists(0, 1):
-            ghost.hide()
-            return f"❌ Cannot find '{cmd.button_name}'", False
-        
-        # 🔹 Show ghost at LIVE position
-        self.point_control(ghost,
-                          btn,
-                          f"{'Auto clicking' if auto_mode else 'Click'} '{cmd.button_name}'")
-        
-        # 🔹 Warm-up hover (CRITICAL for Ribbon)
-        self.warm_up_control(btn)
-        time.sleep(0.25)
-        
-        if auto_mode:
-            self.auto_click(btn)
+            return f"❌ Tab '{cmd.tab_name}' not found", False
+
+        try:
+            already_selected = tab.GetSelectionItemPattern().IsSelected
+        except:
+            already_selected = False
+
+        if not already_selected:
+            r = tab.BoundingRectangle
+            ghost.show_and_move((r.left + r.right) // 2, (r.top + r.bottom) // 2, f"Click {tab.Name}", self.stop_event)
+            if self.stop_event.is_set(): 
+                return "Stopped", False
+            tab.Click(simulateMove=False)
+            time.sleep(0.4)
         else:
-            self._wait_for_click(btn)
-        
-        ghost.hide()
-        ghost.hide()
-        if self.stop_event.is_set():
-            return "Stopped", False
-        
-        return "✅ Excellent!", True
+            self.update_status(f"{cmd.tab_name} is already open.")
+
+        self.update_status(f"Directing to {cmd.button_name}...")
+        btn = ppt.Control(Name=cmd.button_name, searchDepth=15)
+        if not btn.Exists(0, 0):
+            btn = ppt.Control(RegexName=f"(?i).*{cmd.button_name}.*", searchDepth=30)
+
+        if btn.Exists(0, 1):
+            r = btn.BoundingRectangle
+            ghost.show_and_move((r.left + r.right) // 2, (r.top + r.bottom) // 2, f"Click {btn.Name}", self.stop_event)
+            if self.stop_event.is_set(): 
+                return "Stopped", False
+            try:
+                btn.Click(simulateMove=False)
+                return "✅ Done!", True
+            except Exception:
+                auto.Click((r.left + r.right) // 2, (r.top + r.bottom) // 2)
+                return "✅ Done!", True
+
+        return f"❌ Cannot find '{cmd.button_name}'", False
 
 
 # ==========================================
