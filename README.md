@@ -127,7 +127,15 @@ Hackathon-project/
 - Check if all dependencies are installed correctly
 
 ## 📄 License
-This project is open source and available under the [MIT License](LICENSE).
+## License
+
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+
+Copyright 2025 Chippa Rishikesh, Akhil Sreevathsava Gundlapelli, and Navadeep Pantulwar
+
+This project is licensed under the Apache License, Version 2.0. See the [LICENSE](./LICENSE) and [NOTICE](./NOTICE) files for full details.
+
+SPDX-License-Identifier: Apache-2.0
 
 ## 👥 Team
 - **Rishikesh** - Project Lead & Developer
