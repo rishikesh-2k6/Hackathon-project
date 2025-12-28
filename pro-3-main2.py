@@ -260,6 +260,15 @@ class WorkerApp(ctk.CTk):
         self.btn_mini = ctk.CTkButton(self.main_frame, text="🤖", image=self.mini_icon_img, width=60, height=60, fg_color="transparent", command=self.animate_expansion)
         self.btn_mini.place(relx=0.5, rely=0.5, anchor="center")
         self.full_ui_frame = ctk.CTkFrame(self.main_frame, fg_color=self.BG_COLOR, corner_radius=15)
+        # Header
+        self.header = ctk.CTkFrame(self.full_ui_frame, fg_color=self.HEADER_COLOR, height=35, corner_radius=15); self.header.pack(fill="x", padx=2, pady=2)
+        ctk.CTkLabel(self.header, text="Instructly AI", font=("Segoe UI", 12, "bold")).pack(side="left", padx=15)
+        ctk.CTkButton(self.header, text="✕", width=30, height=30, fg_color="transparent", hover_color="#ff4444", command=self.close_app).pack(side="right", padx=5)
+        ctk.CTkButton(self.header, text="—", width=30, height=30, fg_color="transparent", command=self.animate_contraction).pack(side="right", padx=2)
+        # Body
+        self.avatar_display = ctk.CTkLabel(self.full_ui_frame, text="", image=self.images.get("idle")); self.avatar_display.pack(pady=(2, 0))
+        self.dot_wave = ListeningWave(self.full_ui_frame, ["#4285F4", "#EA4335", "#FBBC05", "#34A853"])
+        self.lbl_status = ctk.CTkLabel(self.full_ui_frame, text="Ready.", font=("Segoe UI", 14), text_color="#a9b1d6"); self.lbl_status.pack(pady=(0, 2))
 
 if __name__ == "__main__":
-    print("Instructly AI - Main UI Structure Added")
+    print("Instructly AI - UI Header and Body Added")
