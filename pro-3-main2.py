@@ -279,6 +279,12 @@ class WorkerApp(ctk.CTk):
         self.entry.bind("<Return>", self.start_execution)
         ctk.CTkButton(self.input_bg, text="", image=self.mic_icon, width=30, height=30, fg_color="transparent", command=self.start_voice).pack(side="right")
         ctk.CTkButton(self.input_bg, text="➤", width=30, height=30, fg_color="transparent", command=lambda: self.start_execution(None)).pack(side="right", padx=(0, 5))
+        self.script_box = ctk.CTkTextbox(self.footer, height=90, fg_color="#15161e", corner_radius=10, font=("Consolas", 11), text_color="#ffffff")
+        self.script_box.pack(fill="x", pady=(0, 0)); self.script_box.insert("0.0", "Steps will appear here..."); self.script_box.configure(state="disabled")
+        self.lang_frame = ctk.CTkFrame(self.footer, fg_color="transparent"); self.lang_frame.pack(fill="x", pady=2)
+        self.lang_menu = ctk.CTkOptionMenu(self.lang_frame, values=["English", "Hindi", "Telugu", "Tamil"], width=70, height=18, font=("Segoe UI", 9))
+        self.lang_menu.pack(side="left")
+        ctk.CTkButton(self.lang_frame, text="Translate", width=50, height=18, font=("Segoe UI", 9), fg_color=self.ACCENT_COLOR, command=self.do_translate).pack(side="right")
 
 if __name__ == "__main__":
-    print("Instructly AI - Input Controls Added")
+    print("Instructly AI - Script Display and Translation Added")
