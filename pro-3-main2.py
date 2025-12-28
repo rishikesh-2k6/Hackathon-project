@@ -66,43 +66,64 @@ print(f"✅ CONNECTED TO MODEL: {CURRENT_MODEL}")
 # AI CLIENT
 # ==========================================
 
-# ==========================================
-# OFFLINE CACHE
-# ==========================================
-OFFLINE_COMMANDS = {
-    "font": {"tab": "Home", "btn": "Font"},
-    "change font": {"tab": "Home", "btn": "Font"},
-    "typeface": {"tab": "Home", "btn": "Font"},
-    "font size": {"tab": "Home", "btn": "Font Size"},
-    "text size": {"tab": "Home", "btn": "Font Size"},
-    "color": {"tab": "Home", "btn": "Font Color"},
-    "bold": {"tab": "Home", "btn": "Bold"},
-    "italic": {"tab": "Home", "btn": "Italic"},
-    "new slide": {"tab": "Home", "btn": "New Slide"},
-    "layout": {"tab": "Home", "btn": "Layout"},
-    "text": {"tab": "Insert", "btn": "Text Box"},
-    "textbox": {"tab": "Insert", "btn": "Text Box"},
-    "wordart": {"tab": "Insert", "btn": "WordArt"},
-    "stylish": {"tab": "Insert", "btn": "WordArt"},
-    "picture": {"tab": "Insert", "btn": "Pictures"},
-    "image": {"tab": "Insert", "btn": "Pictures"},
-    "shape": {"tab": "Insert", "btn": "Shapes"},
-    "icon": {"tab": "Insert", "btn": "Icons"},
-    "chart": {"tab": "Insert", "btn": "Chart"},
-    "play": {"tab": "Slide Show", "btn": "From Beginning"},
-    # adding new offline commands:
-"underline": {"tab": "Home", "btn": "Underline"},
-"arrange": {"tab": "Home", "btn": "Arrange"},
-# Insert Tab
-"icon": {"tab": "Insert", "btn": "Icons"},
-# Animations Tab (NEW SECTION)
-"animation": {"tab": "Animations", "btn": "Add Animation"},
-"animate": {"tab": "Animations", "btn": "Add Animation"},
-"fade": {"tab": "Animations", "btn": "Fade"},
-"fly in": {"tab": "Animations", "btn": "Fly In"},
-# ... 6 more animation commands
+def translate_text_api(text, target_lang):
+    if not text.strip(): 
+        return ""
+    
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{CURRENT_MODEL}:generateContent?key={MY_API_KEY}"
+    headers = {'Content-Type': 'application/json'}
+    
+    prompt = f"Translate the following technical instruction to {target_lang}. Output ONLY the translated text. Do not add any introductory phrases like 'Here is the translation'. Text: '{text}'"
+    data = { "contents": [{ "parts": [{"text": prompt}] }] }
+    
+    try:
+        response = requests.post(url, headers=headers, json=data)
+        if response.status_code == 200:
+            return response.json()['candidates'][0]['content']['parts'][0]['text'].strip()
+    except: 
+        pass
+    return text
 
-}
+# ==========================================
+# UI COMPONENTS
+# ==========================================
+class ListeningWave:
+    def __init__(self, parent, colors):
+        # Reduced height further to bring things up
+        self.canvas = tk.Canvas(parent, width=150, height=20, bg="#1a1b26", highlightthickness=0) 
+        self.colors = colors
+        self.dots = []
+        self.angle = 0
+        self.is_animating = False
+        
+        for i in range(4):
+            # Adjusted Y position for dots within the smaller canvas
+            dot = self.canvas.create_oval(35 + i * 22, 5, 47 + i * 22, 17, fill=self.colors[i], outline="") 
+            self.dots.append(dot)
+    
+    def start(self):
+        self.is_animating = True
+        self.canvas.pack(pady=(0, 2)) # Minimal padding
+        self.animate()
+    
+    def stop(self):
+        self.is_animating = False
+        self.canvas.pack_forget()
+    
+    def animate(self):
+        if not self.is_animating: 
+            return
+        
+        for i, dot in enumerate(self.dots):
+            y_offset = math.sin(self.angle + (i * 0.9)) * 4 # Slightly reduced amplitude
+            x1 = 35 + i * 22
+            y1 = 5 + y_offset
+            x2 = 47 + i * 22
+            y2 = 17 + y_offset
+            self.canvas.coords(dot, x1, y1, x2, y2)
+        
+        self.angle += 0.2
+        self.canvas.after(20, self.animate)
 
 
 class PPTCommand(BaseModel):
