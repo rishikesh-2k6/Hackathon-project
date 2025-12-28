@@ -85,7 +85,7 @@ def get_working_model():
                 name = m['name'].replace("models/", "")
                 if "flash" in name and "8b" not in name: return name
     except: pass
-    return "gemini-2.5-flash"
+    return "gemini-1.5-flash"
 
 CURRENT_MODEL = get_working_model()
 
@@ -338,13 +338,31 @@ class WorkerApp(ctk.CTk):
         
         # Footer
         self.footer = ctk.CTkFrame(self.full_ui_frame, fg_color="transparent"); self.footer.pack(fill="x", padx=15, pady=2, side="bottom")
-        self.btn_bar = ctk.CTkFrame(self.footer, fg_color="transparent"); self.btn_bar.pack(fill="x", pady=(0, 2))
         
-        self.btn_auto = ctk.CTkButton(self.btn_bar, text="🤖 Auto", height=28, fg_color="#1e2233", text_color="#a9b1d6", command=self.toggle_auto_mode)
-        self.btn_auto.pack(side="left", expand=True, padx=(0, 2), fill="x")
-        
-        ctk.CTkButton(self.btn_bar, text="🔄 Redo", height=28, fg_color=self.ACCENT_COLOR, command=self.redo_action).pack(side="left", expand=True, padx=2, fill="x")
-        ctk.CTkButton(self.btn_bar, text="❌ Stop", height=28, fg_color="#f7768e", text_color="black", command=self.stop_action).pack(side="left", expand=True, padx=(2, 0), fill="x")
+        # ==========================================
+        # UPDATED BUTTON BAR (Equal Spacing)
+        # ==========================================
+        self.btn_bar = ctk.CTkFrame(self.footer, fg_color="transparent")
+        self.btn_bar.pack(fill="x", pady=(0, 5))
+
+        # Define 3 equal columns
+        self.btn_bar.grid_columnconfigure((0, 1, 2), weight=1, uniform="buttons")
+
+        self.btn_auto = ctk.CTkButton(self.btn_bar, text="🤖 Auto", height=28, 
+                                       fg_color="#1e2233", text_color="#a9b1d6", 
+                                       command=self.toggle_auto_mode)
+        self.btn_auto.grid(row=0, column=0, padx=(0, 2), sticky="ew")
+
+        self.btn_redo = ctk.CTkButton(self.btn_bar, text="🔄 Redo", height=28, 
+                                       fg_color=self.ACCENT_COLOR, 
+                                       command=self.redo_action)
+        self.btn_redo.grid(row=0, column=1, padx=2, sticky="ew")
+
+        self.btn_stop = ctk.CTkButton(self.btn_bar, text="❌ Stop", height=28, 
+                                       fg_color="#1e2233", text_color="#a9b1d6", 
+                                       command=self.stop_action)
+        self.btn_stop.grid(row=0, column=2, padx=(2, 0), sticky="ew")
+        # ==========================================
         
         self.input_bg = ctk.CTkFrame(self.footer, fg_color="black", corner_radius=18, height=35); self.input_bg.pack(fill="x", pady=(0, 5))
         self.entry = ctk.CTkEntry(self.input_bg, placeholder_text="Command...", border_width=0, fg_color="transparent", font=("Segoe UI", 12)); self.entry.pack(side="left", fill="both", expand=True, padx=(10, 5))
