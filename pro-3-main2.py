@@ -286,5 +286,29 @@ class WorkerApp(ctk.CTk):
         self.lang_menu.pack(side="left")
         ctk.CTkButton(self.lang_frame, text="Translate", width=50, height=18, font=("Segoe UI", 9), fg_color=self.ACCENT_COLOR, command=self.do_translate).pack(side="right")
 
+    def update_script_safe(self, text):
+        self.script_box.configure(state="normal"); self.script_box.delete("0.0", "end"); self.script_box.insert("0.0", text); self.script_box.configure(state="disabled")
+
+    def do_translate(self):
+        target = self.lang_menu.get(); original = self.script_box.get("0.0", "end").strip()
+        if not original or "Steps" in original: return
+        threading.Thread(target=lambda: self.update_script_safe(translate_text_api(original, target))).start()
+
+    def animate_expansion(self):
+        cx, cy = self.winfo_x(), self.winfo_y(); self.btn_mini.place_forget(); self.configure(fg_color=self.BG_COLOR); self.wm_attributes("-transparentcolor", "")
+        self.geometry(f"340x520+{cx}+{cy}"); self.full_ui_frame.pack(fill="both", expand=True); self.entry.focus_set()
+
+    def animate_contraction(self):
+        cx, cy = self.winfo_x(), self.winfo_y(); self.full_ui_frame.pack_forget(); self.configure(fg_color=self.TRANSPARENT_COLOR); self.wm_attributes("-transparentcolor", self.TRANSPARENT_COLOR)
+        self.geometry(f"60x60+{cx}+{cy}"); self.btn_mini.place(relx=0.5, rely=0.5, anchor="center")
+
+    def close_app(self): self.quit(); sys.exit()
+
+    def update_status_safe(self, msg): self.lbl_status.configure(text=msg)
+
+    def stop_action(self): self.automator.stop_event.set(); self.ghost.hide(); self.update_status_safe("Stopped.")
+
+    def redo_action(self): if self.last_input: self.execute_thread(self.last_input)
+
 if __name__ == "__main__":
-    print("Instructly AI - Script Display and Translation Added")
+    print("Instructly AI - UI Helper Methods Added")
