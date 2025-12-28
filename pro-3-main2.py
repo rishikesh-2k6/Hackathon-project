@@ -72,5 +72,22 @@ class ListeningWave:
         self.angle += 0.2
         self.canvas.after(20, self.animate)
 
+# ==========================================
+# AUTO-DETECT MODEL
+# ==========================================
+def get_working_model():
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models?key={MY_API_KEY}"
+        response = requests.get(url)
+        data = response.json()
+        for m in data.get('models', []):
+            if 'generateContent' in m.get('supportedGenerationMethods', []):
+                name = m['name'].replace("models/", "")
+                if "flash" in name and "8b" not in name: return name
+    except: pass
+    return "gemini-1.5-flash"
+
+CURRENT_MODEL = get_working_model()
+
 if __name__ == "__main__":
-    print("Instructly AI - UI Components Added")
+    print("Instructly AI - AI Model Detection Added")
