@@ -187,5 +187,53 @@ class GhostCursor:
         except: pass
         finally: comtypes.CoUninitialize()
 
+# ==========================================
+# AUTOMATOR
+# ==========================================
+class Automator:
+    def __init__(self, status_cb, script_cb):
+        self.update_status = status_cb
+        self.update_script = script_cb
+        self.stop_event = threading.Event()
+
+    def get_ppt_window(self):
+        ppt = auto.WindowControl(searchDepth=1, ClassName="PPTFrameClass")
+        if ppt.Exists(0, 0): return ppt
+        return None
+
+    def _wait_for_click(self, target_control):
+        rect = target_control.BoundingRectangle
+        while not self.stop_event.is_set():
+            if ctypes.windll.user32.GetKeyState(0x01) < 0:
+                mx, my = auto.GetCursorPos()
+                if rect.left <= mx <= rect.right and rect.top <= my <= rect.bottom: return True
+            time.sleep(0.1)
+        return False
+
+    def execute_single_step(self, cmd, ghost, ppt):
+        if self.stop_event.is_set(): return "Stopped", False
+        # 1. Tab
+        self.update_status(f"Go to: {cmd.tab_name}")
+        tab = ppt.TabItemControl(Name=cmd.tab_name, searchDepth=10)
+        if not tab.Exists(0, 0): tab = ppt.TabItemControl(RegexName=f"(?i).*{cmd.tab_name}.*", searchDepth=10)
+        if tab.Exists(0, 1):
+            r = tab.BoundingRectangle
+            ghost.point_at((r.left+r.right)//2, (r.top+r.bottom)//2, f"Click '{cmd.tab_name}'")
+            if not self._wait_for_click(tab): return "Stopped", False
+            ghost.hide()
+            time.sleep(0.5)
+        # 2. Button
+        self.update_status(f"Target: {cmd.button_name}")
+        btn = ppt.Control(Name=cmd.button_name, searchDepth=15)
+        if not btn.Exists(0, 0): btn = ppt.Control(RegexName=f"(?i).*{cmd.button_name}.*", searchDepth=15)
+        if btn.Exists(0, 1):
+            r = btn.BoundingRectangle
+            ghost.point_at((r.left+r.right)//2, (r.top+r.bottom)//2, f"Click '{cmd.button_name}'")
+            if not self._wait_for_click(btn): return "Stopped", False
+            ghost.hide()
+            return f"Step '{cmd.button_name}' Done", True
+        ghost.hide()
+        return f"❌ Missing: {cmd.button_name}", False
+
 if __name__ == "__main__":
-    print("Instructly AI - Ghost Cursor Added")
+    print("Instructly AI - Automator Added")
