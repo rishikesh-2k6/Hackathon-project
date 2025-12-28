@@ -310,5 +310,26 @@ class WorkerApp(ctk.CTk):
 
     def redo_action(self): if self.last_input: self.execute_thread(self.last_input)
 
+    def start_voice(self):
+        if self.is_listening: return
+        self.is_listening = True; self.set_expression("listening"); self.dot_wave.start(); threading.Thread(target=self.bg_listen).start()
+
+    def bg_listen(self):
+        try:
+            with sr.Microphone() as source: self.recognizer.adjust_for_ambient_noise(source, 0.5); audio = self.recognizer.listen(source, timeout=5)
+            text = self.recognizer.recognize_google(audio); self.after(0, lambda: self.quick_command(text))
+        except: self.update_status_safe("Voice Error")
+        finally: self.is_listening = False; self.after(0, self.dot_wave.stop)
+
+    def quick_command(self, txt): self.entry.delete(0, 'end'); self.entry.insert(0, txt); self.start_execution(None)
+
+    def start_execution(self, event):
+        txt = self.entry.get(); if not txt: return
+        self.last_input = txt; self.entry.delete(0, 'end'); self.execute_thread(txt)
+
+    def set_expression(self, expr): if expr in self.images: self.avatar_display.configure(image=self.images[expr])
+
+    def execute_thread(self, txt): self.set_expression("thinking"); self.update_status_safe("Analyzing Sequence..."); threading.Thread(target=self.bg_execute, args=(txt,), daemon=True).start()
+
 if __name__ == "__main__":
-    print("Instructly AI - UI Helper Methods Added")
+    print("Instructly AI - Voice Recognition Added")
