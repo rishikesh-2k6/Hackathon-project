@@ -58,6 +58,7 @@ class ListeningWave:
 # ==========================================
 # SYSTEM OPTIMIZATION
 # ==========================================
+sys.stdout.reconfigure(encoding='utf-8', line_buffering=True)
 try:
     p = psutil.Process(os.getpid())
     p.nice(psutil.HIGH_PRIORITY_CLASS)
@@ -92,31 +93,54 @@ try:
 except Exception:
     pass
 
-def translate_text_api(text, target_lang):
-    if not text.strip(): 
-        return ""
-    
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{CURRENT_MODEL}:generateContent?key={MY_API_KEY}"
-    headers = {'Content-Type': 'application/json'}
-    
-    prompt = f"Translate the following technical instruction to {target_lang}. Output ONLY the translated text. Do not add any introductory phrases like 'Here is the translation'. Text: '{text}'"
-    data = { "contents": [{ "parts": [{"text": prompt}] }] }
-    
-    try:
-        response = requests.post(url, headers=headers, json=data)
-        if response.status_code == 200:
-            return response.json()['candidates'][0]['content']['parts'][0]['text'].strip()
-    except: 
-        pass
-    return text
+# ==========================================
+# OFFLINE COMMAND CACHE
+# ==========================================
+OFFLINE_COMMANDS = {
+    "font": {"tab": "Home", "btn": "Font"},
+    "bold": {"tab": "Home", "btn": "Bold"},
+    "italic": {"tab": "Home", "btn": "Italic"},
+    "underline": {"tab": "Home", "btn": "Underline"},
+    "new slide": {"tab": "Home", "btn": "New Slide"},
+    "layout": {"tab": "Home", "btn": "Layout"},
+    "text": {"tab": "Insert", "btn": "Text Box"},
+    "textbox": {"tab": "Insert", "btn": "Text Box"},
+    "picture": {"tab": "Insert", "btn": "Pictures"},
+    "image": {"tab": "Insert", "btn": "Pictures"},
+    "shape": {"tab": "Insert", "btn": "Shapes"},
+    "icon": {"tab": "Insert", "btn": "Icons"},
+    "chart": {"tab": "Insert", "btn": "Chart"},
+    "animation": {"tab": "Animations", "btn": "Add Animation"},
+    "animate": {"tab": "Animations", "btn": "Add Animation"},
+    "fade": {"tab": "Animations", "btn": "Fade"},
+    "fly in": {"tab": "Animations", "btn": "Fly In"},
+    "play": {"tab": "Slide Show", "btn": "From Beginning"},
+}
 
-# ==========================================
-# UI COMPONENTS
-# ==========================================
-class ListeningWave:
-    def __init__(self, parent, colors):
-        # Reduced height further to bring things up
-        self.canvas = tk.Canvas(parent, width=150, height=20, bg="#1a1b26", highlightthickness=0) 
+class PPTCommand(BaseModel):
+    tab_name: str
+    button_name: str
+    explanation: str
+
+def get_ai_command(user_text):
+    clean = user_text.lower().strip()
+    for key, val in OFFLINE_COMMANDS.items():
+        if key in clean:
+            return PPTCommand(tab_name=val["tab"], button_name=val["btn"], explanation="Offline"), "Offline"
+
+    if not model: 
+        return None, "AI Config Error"
+
+    try:
+        prompt = f"""Map this PowerPoint request to a Ribbon Tab and Button Name. 
+Request: "{user_text}" 
+Return JSON: {{"tab_name": "Insert", "button_name": "Shapes", "explanation": "..."}}"""
+        response = model.generate_content(prompt)
+        text_resp = response.text.replace("```json", "").replace("```", "").strip()
+        data = json.loads(text_resp)
+        return PPTCommand(tab_name=data["tab_name"], button_name=data["button_name"], explanation="AI"), None
+    except Exception:
+        return None, "AI Error" 
         self.colors = colors
         self.dots = []
         self.angle = 0
