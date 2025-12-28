@@ -235,5 +235,31 @@ class Automator:
         ghost.hide()
         return f"❌ Missing: {cmd.button_name}", False
 
+# ==========================================
+# MAIN UI APPLICATION
+# ==========================================
+class WorkerApp(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+        self.TRANSPARENT_COLOR = "#ffff01"; self.BG_COLOR = "#1a1b26"; self.HEADER_COLOR = "#1f2335"; self.ACCENT_COLOR = "#24283b"
+        self.geometry("60x60+100+100"); self.overrideredirect(True); self.attributes('-topmost', True)
+        self.configure(fg_color=self.TRANSPARENT_COLOR); self.wm_attributes("-transparentcolor", self.TRANSPARENT_COLOR)
+        self.is_listening = False; self.last_input = ""; self.recognizer = sr.Recognizer()
+        self.ghost = GhostCursor(); self.automator = Automator(self.update_status_safe, self.update_script_safe)
+        script_dir = os.path.dirname(os.path.abspath(__file__)); self.images = {}
+        files = {"idle": "robo_idle.png", "listening": "robo_listening.png", "thinking": "robo_thinking.png", "success": "robo_success.png", "error": "robo_error.png"}
+        self.mini_icon_img = None
+        for k, v in files.items():
+            path = os.path.join(script_dir, v)
+            if os.path.exists(path):
+                img = Image.open(path); self.images[k] = ctk.CTkImage(img, size=(130, 130))
+                if k == "idle": self.mini_icon_img = ctk.CTkImage(img, size=(60, 60))
+        try: self.mic_icon = ctk.CTkImage(Image.open(os.path.join(script_dir, "mic.png")), size=(18, 18))
+        except: self.mic_icon = None
+        self.main_frame = ctk.CTkFrame(self, fg_color="transparent"); self.main_frame.pack(fill="both", expand=True)
+        self.btn_mini = ctk.CTkButton(self.main_frame, text="🤖", image=self.mini_icon_img, width=60, height=60, fg_color="transparent", command=self.animate_expansion)
+        self.btn_mini.place(relx=0.5, rely=0.5, anchor="center")
+        self.full_ui_frame = ctk.CTkFrame(self.main_frame, fg_color=self.BG_COLOR, corner_radius=15)
+
 if __name__ == "__main__":
-    print("Instructly AI - Automator Added")
+    print("Instructly AI - Main UI Structure Added")
