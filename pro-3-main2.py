@@ -230,8 +230,103 @@ class GhostCursor:
 # AUTOMATOR
 # ==========================================
 class Automator:
-    def __init__(self, status_cb):
+    def auto_click(self, control):
+        # 1️⃣ InvokePattern (best)
+        try:
+            control.GetInvokePattern().Invoke()
+            return True
+        except:
+            pass
+        
+        # 2️⃣ TogglePattern
+        try:
+            control.GetTogglePattern().Toggle()
+            return True
+        except:
+            pass
+        
+        # 3️⃣ SelectionItemPattern
+        try:
+            control.GetSelectionItemPattern().Select()
+            return True
+        except:
+            pass
+        
+        # 4️⃣ ExpandCollapsePattern
+        try:
+            control.GetExpandCollapsePattern().Expand()
+            return True
+        except:
+            pass
+        
+        # 5️⃣ Mouse fallback
+        try:
+            r = control.BoundingRectangle
+            x = (r.left + r.right) // 2
+            y = (r.top + r.bottom) // 2
+            auto.MoveTo(x, y)
+            time.sleep(0.05)
+            auto.Click(x, y)
+            return True
+        except:
+            return False
+    
+    def point_control(self, ghost, control, text):
+        try:
+            r = control.BoundingRectangle
+            x = (r.left + r.right) // 2
+            y = (r.top + r.bottom) // 2
+            ghost.point_at(x, y, text)
+        except:
+            pass
+    
+    def warm_up_control(self, control):
+        try:
+            r = control.BoundingRectangle
+            x = (r.left + r.right) // 2
+            y = (r.top + r.bottom) // 2
+            auto.MoveTo(x, y)
+            time.sleep(0.05)
+        except:
+            pass
+    
+    def bring_ppt_to_foreground(self, ppt_window):
+        try:
+            hwnd = ppt_window.NativeWindowHandle
+            # Do NOT restore / maximize
+            # Just allow interaction
+            fg = ctypes.windll.user32.GetForegroundWindow()
+            tid1 = ctypes.windll.user32.GetWindowThreadProcessId(fg, 0)
+            tid2 = ctypes.windll.user32.GetWindowThreadProcessId(hwnd, 0)
+            ctypes.windll.user32.AttachThreadInput(tid1, tid2, True)
+            ctypes.windll.user32.SetForegroundWindow(hwnd)
+            ctypes.windll.user32.AttachThreadInput(tid1, tid2, False)
+        except Exception as e:
+            print("Foreground attach failed:", e)
+
+    def __init__(self, status_cb, script_cb):
         self.update_status = status_cb
+        self.update_script = script_cb
+        self.stop_event = threading.Event()
+    
+    def get_ppt_window(self):
+        ppt = auto.WindowControl(searchDepth=1, ClassName="PPTFrameClass")
+        if ppt.Exists(0, 0): 
+            return ppt
+        return None
+    
+    def get_current_tab_name(self, ppt_window): 
+        return "Unknown" 
+    
+    def _wait_for_click(self, target_control):
+        rect = target_control.BoundingRectangle
+        while not self.stop_event.is_set():
+            if ctypes.windll.user32.GetKeyState(0x01) < 0:
+                mx, my = auto.GetCursorPos()
+                if rect.left <= mx <= rect.right and rect.top <= my <= rect.bottom: 
+                    return True
+            time.sleep(0.1)
+        return False
 
     def execute(self, cmd, ghost):
         ppt = auto.WindowControl(searchDepth=1, ClassName="PPTFrameClass")
